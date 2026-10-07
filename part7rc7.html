@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần Đáp Án - Phân Tách Cụm Từ & Dịch Thuật</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Base style for parsed phrase chips */
+        .phrase-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            margin: 2px 1px;
+            border-radius: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            cursor: pointer;
+            border-bottom: 2px transparent solid;
+            line-height: 1.8rem;
+        }
+
+        /* Highlight tên người nói & thời gian */
+        .speaker-tag {
+            font-weight: 700 !important;
+            color: #1e293b !important;
+            background-color: #e2e8f0 !important;
+        }
+
+        .time-tag {
+            color: #64748b !important;
+            font-size: 0.9em;
+            margin-right: 6px;
+        }
+
+        /* Pastel Highlight colors on hover or active filter */
+        .phrase-vp:hover, .phrase-vp.active-filter {
+            background-color: #ffedd5 !important;
+            color: #9a3412;
+            border-bottom-color: #f97316;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.15);
+        }
+
+        .phrase-np:hover, .phrase-np.active-filter {
+            background-color: #dbeafe !important;
+            color: #1e40af;
+            border-bottom-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .phrase-pp:hover, .phrase-pp.active-filter {
+            background-color: #dcfce7 !important;
+            color: #166534;
+            border-bottom-color: #22c55e;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+        }
+
+        .phrase-adjp:hover, .phrase-adjp.active-filter {
+            background-color: #fef3c7 !important;
+            color: #92400e;
+            border-bottom-color: #eab308;
+            box-shadow: 0 2px 8px rgba(234, 179, 8, 0.15);
+        }
+
+        .phrase-other:hover, .phrase-other.active-filter {
+            background-color: #f3e8ff !important;
+            color: #6b21a8;
+            border-bottom-color: #a855f7;
+            box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
+        }
+
+        /* Hover Tooltip design */
+        .phrase-tag .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            z-index: 50;
+            pointer-events: none;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .phrase-tag:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Note formatting in brackets */
+        .bracket-note {
+            color: #64748b;
+            font-weight: 400;
+            font-size: 0.9em;
+            margin-left: 2px;
+            margin-right: 2px;
+        }
+
+        /* Bold emphasis for words immediately preceding brackets */
+        .bold-before-bracket {
+            font-weight: 700 !important;
+            color: #0f172a;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-16">
+
+    <!-- Bộ lọc cố định ở trên cùng -->
+    <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-4 py-3">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bộ lọc hiển thị theo loại cụm từ:</div>
+            <div class="flex flex-wrap gap-2 text-xs font-medium">
+                <button onclick="filterType('all')" class="legend-btn active px-3.5 py-2 rounded-lg border border-slate-200 bg-slate-800 text-white transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-border-all"></i> Tất cả
+                </button>
+                <button onclick="filterType('vp')" class="legend-btn px-3.5 py-2 rounded-lg border border-orange-200 bg-orange-50 text-orange-900 hover:bg-orange-100 transition flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Cụm động từ
+                </button>
+                <button onclick="filterType('np')" class="legend-btn px-3.5 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-900 hover:bg-blue-100 transition flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Cụm danh từ
+                </button>
+                <button onclick="filterType('pp')" class="legend-btn px-3.5 py-2 rounded-lg border border-green-200 bg-green-50 text-green-900 hover:bg-green-100 transition flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span> Cụm giới từ
+                </button>
+                <button onclick="filterType('adjp')" class="legend-btn px-3.5 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 transition flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Cụm tính từ / Phó từ
+                </button>
+                <button onclick="filterType('other')" class="legend-btn px-3.5 py-2 rounded-lg border border-purple-200 bg-purple-50 text-purple-900 hover:bg-purple-100 transition flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Thành phần lẻ / Từ nối
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-6xl mx-auto px-4 mt-6 grid grid-cols-1 gap-6">
+
+        <!-- Hộp hiển thị văn bản đã tách cụm -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 min-h-[180px] relative">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                <h2 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-comments text-orange-500"></i> Questions 172-175 refer to the following online chat discussion. (5ng)
+                </h2>
+                <div class="flex items-center gap-2">
+                    <span id="engineBadge" class="text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full font-medium">
+                        Đáp án chuẩn
+                    </span>
+                    <span id="phraseCount" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-medium">0 cụm</span>
+                </div>
+            </div>
+
+            <div id="resultContent" class="text-base md:text-lg leading-relaxed text-slate-800 tracking-wide select-text py-2">
+                <!-- Nội dung được điền tự động bằng JavaScript -->
+            </div>
+        </section>
+
+        <!-- Active Selected Phrase Detail Box -->
+        <div id="detailCard" class="bg-slate-900 text-white rounded-2xl p-4 shadow-lg border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-language"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium mb-0.5">Dịch nghĩa cụm từ đang hover:</div>
+                    <div id="cardTranslation" class="font-semibold text-orange-300 text-base md:text-lg">Rê chuột hoặc chạm vào cụm từ bất kỳ ở trên</div>
+                </div>
+            </div>
+            <div class="text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2">
+                <span>Loại cú pháp:</span>
+                <span id="cardGrammarType" class="font-bold text-white">Chưa chọn</span>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const DEFAULT_PARSED_DATA = [
+  { text: "Morton Talbert", type: "np", grammarName: "Noun Phrase", viTranslation: "Morton Talbert" },
+  { text: "(7:32 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:32 tối)" },
+  { text: "Has", type: "vp", grammarName: "Verb Phrase", viTranslation: "Có" },
+  { text: "anyone", type: "np", grammarName: "Noun Phrase", viTranslation: "ai" },
+  { text: "used", type: "vp", grammarName: "Verb Phrase", viTranslation: "đã sử dụng" },
+  { text: "the Internet device Bam Booster", type: "np", grammarName: "Noun Phrase", viTranslation: "thiết bị Internet Bam Booster" },
+  { text: "?", type: "other", grammarName: "Other", viTranslation: "?" },
+  { text: "Chaya Leven", type: "np", grammarName: "Noun Phrase", viTranslation: "Chaya Leven" },
+  { text: "(7:37 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:37 tối)" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "have used", type: "vp", grammarName: "Verb Phrase", viTranslation: "đã sử dụng" },
+  { text: "other brands", type: "np", grammarName: "Noun Phrase", viTranslation: "các nhãn hiệu khác" },
+  { text: "in the past", type: "pp", grammarName: "Prepositional Phrase", viTranslation: "trong quá khứ" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "but", type: "other", grammarName: "Other", viTranslation: "nhưng" },
+  { text: "now", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "bây giờ" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "tôi" },
+  { text: "have", type: "vp", grammarName: "Verb Phrase", viTranslation: "có" },
+  { text: "the Bam Booster 10", type: "np", grammarName: "Noun Phrase", viTranslation: "chiếc Bam Booster 10" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "and", type: "other", grammarName: "Other", viTranslation: "và" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "tôi" },
+  { text: "love", type: "vp", grammarName: "Verb Phrase", viTranslation: "yêu thích" },
+  { text: "it", type: "np", grammarName: "Noun Phrase", viTranslation: "nó" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Laria Jones", type: "np", grammarName: "Noun Phrase", viTranslation: "Laria Jones" },
+  { text: "(7:38 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:38 tối)" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "have", type: "vp", grammarName: "Verb Phrase", viTranslation: "có" },
+  { text: "a poor connection", type: "np", grammarName: "Noun Phrase", viTranslation: "một sự kết nối kém" },
+  { text: "to the Internet", type: "pp", grammarName: "Prepositional Phrase", viTranslation: "với Internet" },
+  { text: "in my basement (tầng hầm)", type: "pp", grammarName: "Prepositional Phrase", viTranslation: "trong tầng hầm của tôi" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "have tried", type: "vp", grammarName: "Verb Phrase", viTranslation: "đã thử" },
+  { text: "several Internet boosters (bộ kích sóng internet)", type: "np", grammarName: "Noun Phrase", viTranslation: "vài bộ kích sóng internet" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "but", type: "other", grammarName: "Other", viTranslation: "nhưng" },
+  { text: "they", type: "np", grammarName: "Noun Phrase", viTranslation: "chúng" },
+  { text: "haven't helped", type: "vp", grammarName: "Verb Phrase", viTranslation: "đã không giúp được" },
+  { text: "at all", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "chút nào" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "They", type: "np", grammarName: "Noun Phrase", viTranslation: "Chúng" },
+  { text: "'re", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì" },
+  { text: "just", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "chỉ" },
+  { text: "not worth (đáng)", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "không đáng" },
+  { text: "the money", type: "np", grammarName: "Noun Phrase", viTranslation: "tiền bạc" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Morton Talbert", type: "np", grammarName: "Noun Phrase", viTranslation: "Morton Talbert" },
+  { text: "(7:40 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:40 tối)" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "am looking for", type: "vp", grammarName: "Verb Phrase", viTranslation: "đang tìm kiếm" },
+  { text: "a reliable (đáng tin) booster", type: "np", grammarName: "Noun Phrase", viTranslation: "một bộ kích sóng đáng tin" },
+  { text: "that", type: "other", grammarName: "Other", viTranslation: "mà" },
+  { text: "'s", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì" },
+  { text: "easy", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "dễ dàng" },
+  { text: "to set up (cài đặt)", type: "vp", grammarName: "Verb Phrase", viTranslation: "để cài đặt" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Chaya Leven", type: "np", grammarName: "Noun Phrase", viTranslation: "Chaya Leven" },
+  { text: "(7:41 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:41 tối)" },
+  { text: "That one", type: "np", grammarName: "Noun Phrase", viTranslation: "Cái đó" },
+  { text: "is", type: "vp", grammarName: "Verb Phrase", viTranslation: "là" },
+  { text: "the best", type: "np", grammarName: "Noun Phrase", viTranslation: "cái tốt nhất" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Leonard Keff", type: "np", grammarName: "Noun Phrase", viTranslation: "Leonard Keff" },
+  { text: "(7:48 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:48 tối)" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "have", type: "vp", grammarName: "Verb Phrase", viTranslation: "có" },
+  { text: "the Bam Booster 7", type: "np", grammarName: "Noun Phrase", viTranslation: "chiếc Bam Booster 7" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "It", type: "np", grammarName: "Noun Phrase", viTranslation: "Nó" },
+  { text: "works", type: "vp", grammarName: "Verb Phrase", viTranslation: "hoạt động" },
+  { text: "fine", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "tốt" },
+  { text: "and", type: "other", grammarName: "Other", viTranslation: "và" },
+  { text: "was", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì đã" },
+  { text: "easy", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "dễ" },
+  { text: "to set up", type: "vp", grammarName: "Verb Phrase", viTranslation: "để cài đặt" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "but", type: "other", grammarName: "Other", viTranslation: "nhưng" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "tôi" },
+  { text: "'ve heard", type: "vp", grammarName: "Verb Phrase", viTranslation: "đã nghe nói" },
+  { text: "their newer Bam Booster 10 model", type: "np", grammarName: "Noun Phrase", viTranslation: "mẫu Bam Booster 10 mới hơn của họ" },
+  { text: "is", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì" },
+  { text: "better", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "tốt hơn" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Danyelle Walken", type: "np", grammarName: "Noun Phrase", viTranslation: "Danyelle Walken" },
+  { text: "(7:52 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:52 tối)" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "have", type: "vp", grammarName: "Verb Phrase", viTranslation: "có" },
+  { text: "the Zeertox Signal Booster", type: "np", grammarName: "Noun Phrase", viTranslation: "bộ kích sóng Zeertox Signal" },
+  { text: "and", type: "other", grammarName: "Other", viTranslation: "và" },
+  { text: "it", type: "np", grammarName: "Noun Phrase", viTranslation: "nó" },
+  { text: "'s", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì" },
+  { text: "somewhat (khá là)", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "khá là" },
+  { text: "big", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "to" },
+  { text: "and", type: "other", grammarName: "Other", viTranslation: "và" },
+  { text: "unsightly (khó coi)", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "khó coi" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "On the positive (tích cực) side", type: "pp", grammarName: "Prepositional Phrase", viTranslation: "Về mặt tích cực" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "it", type: "np", grammarName: "Noun Phrase", viTranslation: "nó" },
+  { text: "'s", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì" },
+  { text: "inexpensive (rẻ)", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "không đắt (rẻ)" },
+  { text: "and", type: "other", grammarName: "Other", viTranslation: "và" },
+  { text: "it", type: "np", grammarName: "Noun Phrase", viTranslation: "nó" },
+  { text: "works", type: "vp", grammarName: "Verb Phrase", viTranslation: "hoạt động" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Chaya Leven", type: "np", grammarName: "Noun Phrase", viTranslation: "Chaya Leven" },
+  { text: "(7:58 P.M.)", type: "other", grammarName: "Other", viTranslation: "(7:58 tối)" },
+  { text: "The Bam Booster 10", type: "np", grammarName: "Noun Phrase", viTranslation: "Chiếc Bam Booster 10" },
+  { text: "is", type: "vp", grammarName: "Verb Phrase", viTranslation: "thì" },
+  { text: "much smaller", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "nhỏ hơn nhiều" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "It", type: "np", grammarName: "Noun Phrase", viTranslation: "Nó" },
+  { text: "does cost", type: "vp", grammarName: "Verb Phrase", viTranslation: "thực sự tốn kém" },
+  { text: "more than other brands", type: "np", grammarName: "Noun Phrase", viTranslation: "hơn các nhãn hiệu khác" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "though", type: "other", grammarName: "Other", viTranslation: "tuy nhiên" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Morton Talbert", type: "np", grammarName: "Noun Phrase", viTranslation: "Morton Talbert" },
+  { text: "(8:02 P.M.)", type: "other", grammarName: "Other", viTranslation: "(8:02 tối)" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "Tôi" },
+  { text: "didn't realize (nhận ra)", type: "vp", grammarName: "Verb Phrase", viTranslation: "đã không nhận ra" },
+  { text: "there", type: "other", grammarName: "Other", viTranslation: "đã" },
+  { text: "was", type: "vp", grammarName: "Verb Phrase", viTranslation: "có" },
+  { text: "more than one Bam Booster model", type: "np", grammarName: "Noun Phrase", viTranslation: "nhiều hơn một mẫu Bam Booster" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." },
+  { text: "Thanks", type: "other", grammarName: "Other", viTranslation: "Cảm ơn" },
+  { text: ",", type: "other", grammarName: "Other", viTranslation: "," },
+  { text: "everybody", type: "np", grammarName: "Noun Phrase", viTranslation: "mọi người" },
+  { text: "!", type: "other", grammarName: "Other", viTranslation: "!" },
+  { text: "Now", type: "adjp", grammarName: "Adjective/Adverb Phrase", viTranslation: "Bây giờ" },
+  { text: "I", type: "np", grammarName: "Noun Phrase", viTranslation: "tôi" },
+  { text: "know", type: "vp", grammarName: "Verb Phrase", viTranslation: "biết" },
+  { text: "what to get", type: "np", grammarName: "Noun Phrase", viTranslation: "nên mua cái gì" },
+  { text: ".", type: "other", grammarName: "Other", viTranslation: "." }
+];
+
+        window.onload = function() {
+            renderParsedData(DEFAULT_PARSED_DATA);
+        };
+
+        function renderParsedData(parsedItems) {
+            const container = document.getElementById('resultContent');
+            container.innerHTML = '';
+
+            document.getElementById('phraseCount').innerText = `${parsedItems.length} cụm từ`;
+
+            parsedItems.forEach((item, index) => {
+                // Kiểm tra xem mục tiếp theo có phải là thời gian hay không để biết đây là Tên người nói
+                const nextItem = parsedItems[index + 1];
+                const isTime = /^\(\d+:\d+\s+[AP]\.M\.\)$/i.test(item.text.trim());
+                const isNextTime = nextItem && /^\(\d+:\d+\s+[AP]\.M\.\)$/i.test(nextItem.text.trim());
+
+                // Xuống dòng và chèn khoảng cách trước tên người nói (ngoại trừ tên đầu tiên)
+                if (isNextTime) {
+                    const lineBreak = document.createElement('div');
+                    lineBreak.className = index === 0 ? 'w-full mb-1' : 'w-full mt-5 mb-1 border-t border-slate-100 pt-3';
+                    container.appendChild(lineBreak);
+                }
+
+                const tag = document.createElement('span');
+                
+                // Style phân biệt riêng cho Tên người nói và Thời gian
+                if (isNextTime) {
+                    tag.className = `phrase-tag speaker-tag`;
+                } else if (isTime) {
+                    tag.className = `phrase-tag time-tag`;
+                } else {
+                    tag.className = `phrase-tag phrase-${item.type}`;
+                }
+
+                tag.setAttribute('data-type', item.type);
+                tag.setAttribute('data-index', index);
+
+                const formattedContent = formatBracketText(item.text);
+
+                tag.innerHTML = `
+                    ${formattedContent}
+                    <span class="tooltip bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg shadow-xl font-normal border border-slate-700">
+                        <span class="text-orange-400 font-semibold">${item.viTranslation || item.text}</span>
+                        <span class="text-slate-400 block text-[10px] mt-0.5">${item.grammarName}</span>
+                    </span>
+                `;
+
+                tag.addEventListener('mouseenter', () => updateDetailCard(item));
+                tag.addEventListener('click', () => updateDetailCard(item));
+
+                container.appendChild(tag);
+            });
+        }
+
+        function updateDetailCard(item) {
+            document.getElementById('cardTranslation').innerText = `"${item.text.trim()}" ➔ ${item.viTranslation || 'N/A'}`;
+            document.getElementById('cardGrammarType').innerText = item.grammarName;
+        }
+
+        function formatBracketText(text) {
+            return text.replace(/(\b[\w']+\b)\s*(\([\s\S]*?\))/g, '<b class="bold-before-bracket">$1</b><span class="bracket-note">$2</span>');
+        }
+
+        function filterType(type) {
+            const tags = document.querySelectorAll('.phrase-tag');
+            const buttons = document.querySelectorAll('.legend-btn');
+
+            buttons.forEach(btn => btn.classList.remove('active', 'bg-slate-800', 'text-white'));
+            event.currentTarget.classList.add('active', 'bg-slate-800', 'text-white');
+
+            tags.forEach(tag => {
+                if (type === 'all') {
+                    tag.classList.remove('active-filter');
+                    tag.style.opacity = '1';
+                } else if (tag.getAttribute('data-type') === type) {
+                    tag.classList.add('active-filter');
+                    tag.style.opacity = '1';
+                } else {
+                    tag.classList.remove('active-filter');
+                    tag.style.opacity = '0.25';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
